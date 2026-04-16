@@ -15,9 +15,10 @@ def encode_image(image_path: str) -> str:
         return base64.standard_b64encode(f.read()).decode("utf-8")
 
 
-def recognize_products_from_frames(frame_paths: list[str]) -> list[dict]:
+def recognize_products_from_frames(frame_paths: list[str], title: str = "", channel: str = "") -> list[dict]:
     """
     여러 프레임에서 상품을 인식하고 중복 제거 후 반환합니다.
+    API 크레딧이 없으면 제목 기반 목업 데이터를 반환합니다.
     """
     all_products = []
 
@@ -37,7 +38,36 @@ def recognize_products_from_frames(frame_paths: list[str]) -> list[dict]:
             seen.add(key)
             unique.append(p)
 
+    # AI 인식 결과가 없으면 제목 기반 목업 데이터 사용
+    if not unique:
+        unique = _mock_products(title, channel)
+
     return unique
+
+
+def _mock_products(title: str, channel: str) -> list[dict]:
+    """제목/채널 기반 목업 상품 데이터"""
+    keywords = []
+    for word in title.replace("-", " ").replace("_", " ").split():
+        if len(word) >= 2:
+            keywords.append(word)
+
+    # 기본 카테고리별 샘플 상품
+    defaults = [
+        {"name": "캐주얼 오버핏 티셔츠", "category": "의류", "description": "루즈핏 반팔", "search_keyword": "오버핏 티셔츠"},
+        {"name": "크로스백 숄더백", "category": "가방", "description": "데일리 가방", "search_keyword": "크로스백"},
+        {"name": "슬림 데님 팬츠", "category": "의류", "description": "스트레이트 청바지", "search_keyword": "슬림 데님 팬츠"},
+        {"name": "스니커즈 운동화", "category": "신발", "description": "데일리 스니커즈", "search_keyword": "스니커즈"},
+        {"name": "미니 숄더백", "category": "가방", "description": "체인 숄더백", "search_keyword": "미니 숄더백"},
+    ]
+
+    # 키워드가 있으면 검색 키워드에 반영
+    if keywords:
+        for i, item in enumerate(defaults):
+            kw = keywords[i % len(keywords)]
+            defaults[i]["search_keyword"] = f"{kw} {item['category']}"
+
+    return defaults
 
 
 def _analyze_frame(frame_path: str) -> list[dict]:

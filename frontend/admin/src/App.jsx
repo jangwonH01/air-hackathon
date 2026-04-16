@@ -12,6 +12,7 @@ export default function App() {
     const res = await fetch("http://localhost:8000/api/jobs");
     const data = await res.json();
     setJobs(data);
+    setSelected(prev => prev ? (data.find(j => j.id === prev.id) ?? prev) : null);
   };
 
   useEffect(() => {
@@ -49,7 +50,7 @@ export default function App() {
         {/* 우측 상세 */}
         {selected && (
           <div style={{ flex: 1, overflowY: "auto" }}>
-            <JobDetail job={selected} onRefresh={fetchJobs} onClose={() => setSelected(null)} />
+            <JobDetail job={selected} onRefresh={fetchJobs} onClose={() => setSelected(null)} onDelete={() => { setSelected(null); fetchJobs(); }} />
           </div>
         )}
       </div>

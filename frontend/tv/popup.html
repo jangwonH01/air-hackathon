@@ -123,7 +123,9 @@ createApp({
 
     onMounted(() => {
       loadPopup();
+      const timer = setInterval(loadPopup, 10000); // 10초마다 새 팝업 확인
       window.addEventListener("keydown", onKeydown);
+      onUnmounted(() => clearInterval(timer));
     });
 
     onUnmounted(() => {

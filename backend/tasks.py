@@ -2,17 +2,21 @@
 Celery 비동기 작업 - 영상 분석 파이프라인
 """
 import os
+import sys
 import asyncio
 from celery import Celery
 from dotenv import load_dotenv
 
-load_dotenv()
+# 백엔드 디렉토리를 경로에 추가
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 celery = Celery("air", broker=os.getenv("REDIS_URL", "redis://localhost:6379/0"))
 
 
 @celery.task(bind=True)
-def analyze_video(self, job_id: int, video_path: str, title: str, channel: str):
+def analyze_video(self, job_id: int, video_path: str, title: str, channel: str, url: str = ""):
     """
     전체 파이프라인 실행:
     영상 → 프레임 추출 → AI 제품 인식 → 쇼핑 매칭 → 웹앱 생성
@@ -31,13 +35,29 @@ def analyze_video(self, job_id: int, video_path: str, title: str, channel: str):
         job.status = "processing"
         db.commit()
 
-        # 2. 프레임 추출
-        frames_dir = f"./frames/job_{job_id}"
+        # 2. URL이면 먼저 다운로드
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        if url and not video_path:
+            import subprocess
+            uploads_dir = os.path.join(BASE_DIR, "uploads")
+            os.makedirs(uploads_dir, exist_ok=True)
+            video_path = os.path.join(uploads_dir, f"video_{job_id}.mp4")
+            result = subprocess.run(
+                ["yt-dlp", "-f", "mp4/best[height<=720]", "-o", video_path, url],
+                capture_output=True, text=True
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f"다운로드 실패: {result.stderr}")
+            job.video_path = video_path
+            db.commit()
+
+        # 3. 프레임 추출
+        frames_dir = os.path.join(BASE_DIR, "frames", f"job_{job_id}")
         frames = extract_frames(video_path, frames_dir, fps=0.5)
         print(f"[Pipeline] 프레임 추출 완료: {len(frames)}개")
 
         # 3. AI 제품 인식
-        raw_products = recognize_products_from_frames(frames)
+        raw_products = recognize_products_from_frames(frames, title=title, channel=channel)
         print(f"[Pipeline] 인식된 상품: {len(raw_products)}개")
 
         # 4. 네이버 쇼핑 매칭

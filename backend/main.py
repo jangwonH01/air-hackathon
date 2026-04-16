@@ -47,24 +47,32 @@ def startup():
 async def create_job(
     title: str = Form(...),
     channel: str = Form(""),
-    video: UploadFile = File(...),
+    video: UploadFile = File(None),
+    url: str = Form(""),
     db: Session = Depends(get_db),
 ):
-    """영상 업로드 및 분석 시작"""
-    # 파일 저장
-    ext = Path(video.filename).suffix
-    save_path = os.path.join(UPLOAD_DIR, f"video_{title[:20]}{ext}")
-    with open(save_path, "wb") as f:
-        shutil.copyfileobj(video.file, f)
-
-    # DB 저장
-    job = AnalysisJob(title=title, channel=channel, video_path=save_path)
-    db.add(job)
-    db.commit()
-    db.refresh(job)
-
-    # 비동기 분석 시작
-    analyze_video.delay(job.id, save_path, title, channel)
+    """영상 업로드 또는 URL로 분석 시작"""
+    if url:
+        job = AnalysisJob(title=title, channel=channel, video_path="", source_url=url, status="pending")
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        analyze_video.delay(job.id, "", title, channel, url=url)
+    elif video:
+        ext = Path(video.filename).suffix
+        # 먼저 job을 만들어 id를 확보
+        job = AnalysisJob(title=title, channel=channel, video_path="")
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        save_path = os.path.join(UPLOAD_DIR, f"video_{job.id}{ext}")
+        with open(save_path, "wb") as f:
+            shutil.copyfileobj(video.file, f)
+        job.video_path = save_path
+        db.commit()
+        analyze_video.delay(job.id, save_path, title, channel)
+    else:
+        raise HTTPException(status_code=400, detail="영상 파일 또는 URL을 입력해주세요.")
 
     return {"job_id": job.id, "status": "processing", "message": "분석을 시작했습니다."}
 
@@ -94,6 +102,43 @@ def toggle_popup(job_id: int, enabled: bool, db: Session = Depends(get_db)):
     job.popup_enabled = "on" if enabled else "off"
     db.commit()
     return {"popup_enabled": job.popup_enabled}
+
+
+@app.post("/api/jobs/{job_id}/retry")
+def retry_job(job_id: int, db: Session = Depends(get_db)):
+    """실패/대기 작업 재시도"""
+    job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다.")
+    job.status = "pending"
+    db.commit()
+    analyze_video.delay(job.id, job.video_path or "", job.title, job.channel or "", url=job.source_url or "")
+    return {"job_id": job.id, "status": "processing", "message": "재시도를 시작했습니다."}
+
+
+@app.patch("/api/jobs/{job_id}")
+def update_job(job_id: int, title: str = None, channel: str = None, db: Session = Depends(get_db)):
+    """작업 제목/채널 수정"""
+    job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다.")
+    if title is not None:
+        job.title = title
+    if channel is not None:
+        job.channel = channel
+    db.commit()
+    return _job_to_dict(job)
+
+
+@app.delete("/api/jobs/{job_id}")
+def delete_job(job_id: int, db: Session = Depends(get_db)):
+    """작업 삭제"""
+    job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다.")
+    db.delete(job)
+    db.commit()
+    return {"message": "삭제됐습니다."}
 
 
 # ── TV 웹앱 API ─────────────────────────────────────────────

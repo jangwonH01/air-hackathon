@@ -17,7 +17,8 @@ class AnalysisJob(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)           # 방송명
     channel = Column(String, nullable=True)          # 채널명
-    video_path = Column(String, nullable=False)      # 업로드된 영상 경로
+    video_path = Column(String, nullable=True)       # 업로드된 영상 경로
+    source_url = Column(String, nullable=True)       # YouTube 등 원본 URL
     status = Column(String, default="pending")       # pending / processing / done / failed
     products = Column(JSON, default=[])              # 인식된 상품 목록
     webapp_path = Column(String, nullable=True)      # 생성된 웹앱 경로
