@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>AIR 팝업</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -37,11 +38,8 @@
     .popup-icon { font-size: 2.5rem; }
 
     .popup-text { flex: 1; }
-    .popup-title {
-      font-size: 1.15rem; font-weight: 700; color: white;
-      margin-bottom: 4px;
-    }
-    .popup-sub { font-size: 0.85rem; color: rgba(255,255,255,0.85); }
+    .popup-title { font-size: 1.15rem; font-weight: 700; color: white; margin-bottom: 4px; }
+    .popup-sub   { font-size: 0.85rem; color: rgba(255,255,255,0.85); }
 
     .popup-btns { display: flex; flex-direction: column; gap: 8px; }
 
@@ -50,80 +48,91 @@
       border-radius: 8px;
       font-size: 0.85rem; font-weight: 700;
       border: none; cursor: pointer;
-      text-align: center;
-      min-width: 110px;
+      text-align: center; min-width: 110px;
       transition: transform 0.1s;
     }
-    .btn:focus, .btn.focused {
+    .btn.focused {
       outline: 3px solid white;
       transform: scale(1.04);
     }
-    .btn-ok  { background: white; color: #6C63FF; }
-    .btn-no  { background: rgba(255,255,255,0.2); color: white; }
+    .btn-ok { background: white; color: #6C63FF; }
+    .btn-no { background: rgba(255,255,255,0.2); color: white; }
   </style>
 </head>
 <body>
-
-<div class="popup" id="popup">
-  <div class="popup-icon">🛍</div>
-  <div class="popup-text">
-    <div class="popup-title" id="popup-title">방금 본 방송에 나온 상품을 찾았어요!</div>
-    <div class="popup-sub" id="popup-sub">AI가 상품을 인식했어요. 지금 바로 확인해보세요.</div>
-  </div>
-  <div class="popup-btns">
-    <button class="btn btn-ok focused" id="btn-ok" onclick="openShop()">지금 보기</button>
-    <button class="btn btn-no" id="btn-no" onclick="closePopup()">닫기</button>
+<div id="app">
+  <div class="popup" v-if="visible">
+    <div class="popup-icon">🛍</div>
+    <div class="popup-text">
+      <div class="popup-title">'{{ title }}'에 나온 상품을 찾았어요!</div>
+      <div class="popup-sub">AI가 {{ productCount }}개 상품을 인식했어요. 지금 바로 확인해보세요.</div>
+    </div>
+    <div class="popup-btns">
+      <button class="btn btn-ok" :class="{ focused: focusIndex === 0 }" @click="openShop">지금 보기</button>
+      <button class="btn btn-no" :class="{ focused: focusIndex === 1 }" @click="close">닫기</button>
+    </div>
   </div>
 </div>
 
 <script>
-  const API_BASE = "http://localhost:8000";
-  let webappUrl = "";
-  let focusIndex = 0;
-  const btns = [document.getElementById("btn-ok"), document.getElementById("btn-no")];
+const { createApp, ref, onMounted, onUnmounted } = Vue;
 
-  async function loadPopup() {
-    try {
-      const res = await fetch(`${API_BASE}/api/popup/latest`);
-      const data = await res.json();
-      if (data.popup) {
-        const p = data.popup;
-        document.getElementById("popup-title").textContent =
-          `'${p.title}'에 나온 상품을 찾았어요!`;
-        document.getElementById("popup-sub").textContent =
-          `AI가 ${p.product_count}개 상품을 인식했어요. 지금 바로 확인해보세요.`;
-        webappUrl = API_BASE + p.webapp_url;
+createApp({
+  setup() {
+    const API_BASE = "http://localhost:8000";
+
+    const visible      = ref(false);
+    const title        = ref("");
+    const productCount = ref(0);
+    const webappUrl    = ref("");
+    const focusIndex   = ref(0);
+
+    async function loadPopup() {
+      try {
+        const res  = await fetch(`${API_BASE}/api/popup/latest`);
+        const data = await res.json();
+        if (data.popup) {
+          title.value        = data.popup.title;
+          productCount.value = data.popup.product_count;
+          webappUrl.value    = API_BASE + data.popup.webapp_url;
+          visible.value      = true;
+        }
+      } catch (e) {
+        console.error("팝업 로드 실패:", e);
       }
-    } catch (e) {
-      console.error("팝업 로드 실패:", e);
     }
-  }
 
-  function openShop() {
-    if (webappUrl) window.location.href = webappUrl;
-  }
-
-  function closePopup() {
-    document.getElementById("popup").style.display = "none";
-  }
-
-  function updateFocus() {
-    btns.forEach((b, i) => b.classList.toggle("focused", i === focusIndex));
-  }
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
-      focusIndex = (focusIndex - 1 + btns.length) % btns.length;
-      updateFocus();
-    } else if (e.key === "ArrowDown" || e.key === "ArrowRight") {
-      focusIndex = (focusIndex + 1) % btns.length;
-      updateFocus();
-    } else if (e.key === "Enter" || e.key === " ") {
-      btns[focusIndex].click();
+    function openShop() {
+      if (webappUrl.value) window.location.href = webappUrl.value;
     }
-  });
 
-  loadPopup();
+    function close() {
+      visible.value = false;
+    }
+
+    function onKeydown(e) {
+      if (!visible.value) return;
+      if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        focusIndex.value = (focusIndex.value - 1 + 2) % 2;
+      } else if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        focusIndex.value = (focusIndex.value + 1) % 2;
+      } else if (e.key === "Enter" || e.key === " ") {
+        focusIndex.value === 0 ? openShop() : close();
+      }
+    }
+
+    onMounted(() => {
+      loadPopup();
+      window.addEventListener("keydown", onKeydown);
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener("keydown", onKeydown);
+    });
+
+    return { visible, title, productCount, focusIndex, openShop, close };
+  }
+}).mount("#app");
 </script>
 </body>
 </html>

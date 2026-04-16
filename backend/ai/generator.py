@@ -20,7 +20,7 @@ def generate_shopping_webapp(title: str, channel: str, products: list[dict]) -> 
         messages=[
             {
                 "role": "user",
-                "content": f"""아래 상품 정보를 바탕으로 TV 셋탑박스용 쇼핑 웹앱 HTML을 생성해주세요.
+                "content": f"""아래 상품 정보를 바탕으로 TV 셋탑박스용 쇼핑 웹앱을 Vue.js 3 (CDN) 단일 HTML 파일로 생성해주세요.
 
 방송명: {title}
 채널: {channel}
@@ -28,14 +28,16 @@ def generate_shopping_webapp(title: str, channel: str, products: list[dict]) -> 
 {products_json}
 
 요구사항:
+- Vue 3 CDN (https://unpkg.com/vue@3/dist/vue.global.prod.js) 사용
 - 단일 HTML 파일 (CSS/JS 인라인)
-- TV 리모컨으로 조작 가능 (방향키, OK/Enter 키 지원)
+- TV 리모컨 조작 (방향키, Enter 키 지원, 포커스 관리)
 - 어두운 배경 (#0F0F1A), 큰 글씨 (최소 18px)
-- 상품 카드 그리드 (3열), 포커스 시 강조 효과
+- 상품 카드 그리드 (3열), 포커스 시 강조 효과 (outline + scale)
 - 상품 카드: 이미지, 이름, 가격, 구매 버튼
-- 구매 버튼 클릭 시 link URL로 이동
+- 구매 버튼 Enter 시 link URL로 이동
 - 상단에 방송명 표시
-- 페이지네이션 (한 페이지 6개)
+- 페이지네이션 (한 페이지 6개, 방향키로 이동)
+- Vue createApp + setup() 구조 사용
 - 완전한 HTML만 응답하세요. 설명 없이 코드만."""
             }
         ],
