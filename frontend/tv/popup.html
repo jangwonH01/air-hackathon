@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>AIR 팝업</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: sans-serif;
+      background: transparent;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    .popup {
+      background: linear-gradient(135deg, rgba(108,99,255,0.95), rgba(255,101,132,0.95));
+      border-radius: 16px;
+      padding: 24px 32px;
+      max-width: 580px;
+      width: 90%;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+      animation: slideUp 0.4s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    .popup-icon { font-size: 2.5rem; }
+
+    .popup-text { flex: 1; }
+    .popup-title {
+      font-size: 1.15rem; font-weight: 700; color: white;
+      margin-bottom: 4px;
+    }
+    .popup-sub { font-size: 0.85rem; color: rgba(255,255,255,0.85); }
+
+    .popup-btns { display: flex; flex-direction: column; gap: 8px; }
+
+    .btn {
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-size: 0.85rem; font-weight: 700;
+      border: none; cursor: pointer;
+      text-align: center;
+      min-width: 110px;
+      transition: transform 0.1s;
+    }
+    .btn:focus, .btn.focused {
+      outline: 3px solid white;
+      transform: scale(1.04);
+    }
+    .btn-ok  { background: white; color: #6C63FF; }
+    .btn-no  { background: rgba(255,255,255,0.2); color: white; }
+  </style>
+</head>
+<body>
+
+<div class="popup" id="popup">
+  <div class="popup-icon">🛍</div>
+  <div class="popup-text">
+    <div class="popup-title" id="popup-title">방금 본 방송에 나온 상품을 찾았어요!</div>
+    <div class="popup-sub" id="popup-sub">AI가 상품을 인식했어요. 지금 바로 확인해보세요.</div>
+  </div>
+  <div class="popup-btns">
+    <button class="btn btn-ok focused" id="btn-ok" onclick="openShop()">지금 보기</button>
+    <button class="btn btn-no" id="btn-no" onclick="closePopup()">닫기</button>
+  </div>
+</div>
+
+<script>
+  const API_BASE = "http://localhost:8000";
+  let webappUrl = "";
+  let focusIndex = 0;
+  const btns = [document.getElementById("btn-ok"), document.getElementById("btn-no")];
+
+  async function loadPopup() {
+    try {
+      const res = await fetch(`${API_BASE}/api/popup/latest`);
+      const data = await res.json();
+      if (data.popup) {
+        const p = data.popup;
+        document.getElementById("popup-title").textContent =
+          `'${p.title}'에 나온 상품을 찾았어요!`;
+        document.getElementById("popup-sub").textContent =
+          `AI가 ${p.product_count}개 상품을 인식했어요. 지금 바로 확인해보세요.`;
+        webappUrl = API_BASE + p.webapp_url;
+      }
+    } catch (e) {
+      console.error("팝업 로드 실패:", e);
+    }
+  }
+
+  function openShop() {
+    if (webappUrl) window.location.href = webappUrl;
+  }
+
+  function closePopup() {
+    document.getElementById("popup").style.display = "none";
+  }
+
+  function updateFocus() {
+    btns.forEach((b, i) => b.classList.toggle("focused", i === focusIndex));
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+      focusIndex = (focusIndex - 1 + btns.length) % btns.length;
+      updateFocus();
+    } else if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+      focusIndex = (focusIndex + 1) % btns.length;
+      updateFocus();
+    } else if (e.key === "Enter" || e.key === " ") {
+      btns[focusIndex].click();
+    }
+  });
+
+  loadPopup();
+</script>
+</body>
+</html>
