@@ -62,7 +62,14 @@ export default function JobDetail({ job, onRefresh, onClose, onDelete }) {
 
       {/* 상태 카드 */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "12px", marginBottom: "24px" }}>
-        <StatCard label="상태" value={job.status === "done" ? "✅ 완료" : job.status === "processing" ? "⏳ 분석 중" : job.status === "failed" ? "❌ 실패" : "⏸ 대기"} />
+        <StatCard label="상태" value={
+          job.status === "done" ? "✅ 완료" :
+          job.status === "processing" ? "⏳ 분석 중" :
+          job.status === "failed" ? "❌ 실패" :
+          job.status === "no_products" ? "🔍 상품 없음" :
+          job.status === "waiting" ? "🔴 방송 대기" :
+          job.status === "recording" ? "🔴 녹화 중" : "⏸ 대기"
+        } />
         <StatCard label="인식 상품" value={`${job.product_count}개`} />
         <StatCard label="팝업" value={job.popup_enabled === "on" ? "ON" : "OFF"} valueColor={job.popup_enabled === "on" ? "#4CAF50" : "#8888AA"} />
       </div>
@@ -99,21 +106,40 @@ export default function JobDetail({ job, onRefresh, onClose, onDelete }) {
         </button>
       </div>
 
+      {/* 상품 없음 안내 */}
+      {job.status === "no_products" && (
+        <div style={{ padding: "32px", textAlign: "center", background: "#1A1A2E", borderRadius: "12px", marginBottom: "24px" }}>
+          <div style={{ fontSize: "2rem", marginBottom: "12px" }}>🔍</div>
+          <div style={{ fontWeight: 700, marginBottom: "8px" }}>쇼핑 가능한 상품이 없습니다</div>
+          <div style={{ fontSize: "0.85rem", color: "#8888AA" }}>뉴스·시사 영상보다 드라마·예능·패션 콘텐츠에서 상품이 잘 인식됩니다.</div>
+        </div>
+      )}
+
       {/* 상품 목록 */}
       {job.products?.length > 0 && (
         <>
           <h3 style={{ fontSize: "0.9rem", fontWeight: 700, color: "#8888AA", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>인식된 상품</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px" }}>
             {job.products.map((p, i) => (
-              <a key={i} href={p.link} target="_blank" rel="noreferrer"
-                style={{ background: "#1A1A2E", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", overflow: "hidden", textDecoration: "none", color: "inherit", display: "block" }}>
-                {p.image && <img src={p.image} alt={p.name} style={{ width: "100%", aspectRatio: "1", objectFit: "cover" }} />}
-                <div style={{ padding: "10px 12px" }}>
-                  <div style={{ fontSize: "0.8rem", fontWeight: 600, marginBottom: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
-                  <div style={{ fontSize: "0.75rem", color: "#8888AA", marginBottom: "4px" }}>{p.category}</div>
-                  {p.price > 0 && <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#FF6584" }}>{p.price.toLocaleString()}원</div>}
-                </div>
-              </a>
+              <div key={i} style={{ background: "#1A1A2E", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", overflow: "hidden" }}>
+                {/* 방송 스틸샷 */}
+                {p.frame_image && (
+                  <div style={{ position: "relative" }}>
+                    <img src={`http://localhost:8000${p.frame_image}`} alt="방송 화면" style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", opacity: 0.7 }} />
+                    <div style={{ position: "absolute", top: 6, left: 6, background: "rgba(108,99,255,0.9)", color: "white", fontSize: "0.65rem", fontWeight: 700, padding: "3px 7px", borderRadius: "4px" }}>📺 방송 화면</div>
+                  </div>
+                )}
+                {/* 네이버 상품 이미지 */}
+                <a href={p.link} target="_blank" rel="noreferrer" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+                  {p.image && <img src={p.image} alt={p.name} style={{ width: "100%", aspectRatio: "1", objectFit: "cover" }} />}
+                  <div style={{ padding: "10px 12px" }}>
+                    <div style={{ fontSize: "0.8rem", fontWeight: 600, marginBottom: "4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                    <div style={{ fontSize: "0.75rem", color: "#8888AA", marginBottom: "4px" }}>{p.category}</div>
+                    {p.price > 0 && <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#FF6584" }}>{p.price.toLocaleString()}원</div>}
+                    {p.frame_reason && <div style={{ fontSize: "0.7rem", color: "#6C63FF", marginTop: "4px" }}>💡 {p.frame_reason}</div>}
+                  </div>
+                </a>
+              </div>
             ))}
           </div>
         </>

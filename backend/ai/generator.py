@@ -33,6 +33,13 @@ def generate_shopping_webapp(title: str, channel: str, products: list[dict]) -> 
     .card-cat{{font-size:0.8rem;color:#8888AA;margin-bottom:8px;}}
     .card-price{{font-size:1.1rem;font-weight:800;color:#FF6584;}}
     .card-mall{{font-size:0.75rem;color:#8888AA;margin-top:4px;}}
+    .still-wrap{{position:relative;cursor:pointer;}}
+    .still-badge{{position:absolute;top:6px;left:6px;background:rgba(108,99,255,0.85);color:white;font-size:0.65rem;font-weight:700;padding:3px 7px;border-radius:4px;}}
+    .still-overlay{{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:16px;}}
+    .still-overlay.show{{display:flex;}}
+    .still-overlay img{{max-width:80vw;max-height:70vh;border-radius:12px;}}
+    .still-overlay p{{color:#E0E0F0;font-size:0.9rem;}}
+    .still-close{{color:#8888AA;font-size:0.85rem;cursor:pointer;}}
     .pagination{{display:flex;justify-content:center;gap:12px;padding:0 40px 32px;}}
     .page-btn{{background:rgba(108,99,255,0.15);border:1px solid #6C63FF;color:#6C63FF;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;}}
     .page-btn:disabled{{opacity:0.3;cursor:default;}}
@@ -46,10 +53,18 @@ def generate_shopping_webapp(title: str, channel: str, products: list[dict]) -> 
     <span>'{{{{ title }}}}'에서 발견한 상품 {{{{ total }}}}개</span>
     <span style="margin-left:auto;font-size:0.8rem;">{{{{ channel }}}}</span>
   </header>
+  <!-- 스틸샷 모달 -->
+  <div class="still-overlay" :class="{{show: stillModal}}" @click="stillModal=null">
+    <img v-if="stillModal" :src="'http://localhost:8000' + stillModal.frame_image" />
+    <p v-if="stillModal">📍 {{{{ stillModal.frame_reason }}}}</p>
+    <span class="still-close">클릭해서 닫기</span>
+  </div>
+
   <div class="grid">
     <div v-for="(p, i) in pageProducts" :key="i"
       class="card" :class="{{focused: focusIdx === pageStart + i}}"
       @click="open(p)" tabindex="0">
+      <!-- 상품 이미지 (네이버) -->
       <img v-if="p.image" :src="p.image" :alt="p.name" @error="e=>e.target.style.display='none'"/>
       <div v-else class="no-image">🛒</div>
       <div class="card-body">
@@ -57,6 +72,14 @@ def generate_shopping_webapp(title: str, channel: str, products: list[dict]) -> 
         <div class="card-cat">{{{{ p.category }}}}</div>
         <div class="card-price" v-if="p.price > 0">{{{{ p.price.toLocaleString() }}}}원</div>
         <div class="card-mall">{{{{ p.mall }}}}</div>
+        <!-- 방송 스틸샷 버튼 -->
+        <div v-if="p.frame_image" @click.stop="stillModal=p"
+          style="margin-top:8px;display:flex;align-items:center;gap:6px;cursor:pointer;color:#6C63FF;font-size:0.75rem;font-weight:600;">
+          📺 방송 화면 보기
+        </div>
+        <div v-if="p.frame_reason && !p.frame_image" style="margin-top:6px;font-size:0.72rem;color:#8888AA;">
+          💡 {{{{ p.frame_reason }}}}
+        </div>
       </div>
     </div>
   </div>
@@ -76,6 +99,7 @@ createApp({{
     const PER_PAGE = 6;
     const page = ref(0);
     const focusIdx = ref(0);
+    const stillModal = ref(null);
     const total = computed(() => products.length);
     const totalPages = computed(() => Math.ceil(products.length / PER_PAGE));
     const pageStart = computed(() => page.value * PER_PAGE);
@@ -93,7 +117,7 @@ createApp({{
     }}
     onMounted(() => window.addEventListener('keydown', onKey));
     onUnmounted(() => window.removeEventListener('keydown', onKey));
-    return {{ products, title, channel, total, page, totalPages, pageStart, pageProducts, focusIdx, open }};
+    return {{ products, title, channel, total, page, totalPages, pageStart, pageProducts, focusIdx, open, stillModal }};
   }}
 }}).mount('#app');
 </script>

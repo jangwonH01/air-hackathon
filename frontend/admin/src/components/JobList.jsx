@@ -1,8 +1,11 @@
 const STATUS = {
-  pending:    { label: "대기 중",   color: "#8888AA", bg: "rgba(136,136,170,0.1)" },
-  processing: { label: "분석 중",   color: "#FF9800", bg: "rgba(255,152,0,0.1)" },
-  done:       { label: "완료",      color: "#4CAF50", bg: "rgba(76,175,80,0.1)"  },
-  failed:     { label: "실패",      color: "#FF5252", bg: "rgba(255,82,82,0.1)"  },
+  pending:     { label: "대기 중",          color: "#8888AA", bg: "rgba(136,136,170,0.1)" },
+  waiting:     { label: "🔴 방송 대기",     color: "#FF5252", bg: "rgba(255,82,82,0.1)"   },
+  recording:   { label: "🔴 녹화 중",       color: "#FF5252", bg: "rgba(255,82,82,0.15)"  },
+  processing:  { label: "분석 중",          color: "#FF9800", bg: "rgba(255,152,0,0.1)"   },
+  done:        { label: "완료",             color: "#4CAF50", bg: "rgba(76,175,80,0.1)"   },
+  no_products: { label: "상품 없음",        color: "#8888AA", bg: "rgba(136,136,170,0.1)" },
+  failed:      { label: "실패",             color: "#FF5252", bg: "rgba(255,82,82,0.1)"   },
 };
 
 export default function JobList({ jobs, selected, onSelect }) {

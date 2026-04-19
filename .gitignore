@@ -12,6 +12,7 @@ venv/
 # 업로드/생성 파일
 backend/uploads/
 backend/frames/
+backend/stills/
 backend/generated_apps/
 backend/air.db
 

@@ -50,11 +50,13 @@ async def _search_product(client: httpx.AsyncClient, product: dict) -> dict | No
             "link": top.get("link", ""),
             "mall": top.get("mallName", ""),
             "search_keyword": product.get("search_keyword", ""),
+            "frame_image": product.get("frame_image", ""),
+            "frame_reason": product.get("frame_reason", ""),
+            "detected_tags": product.get("detected_tags", []),
         }
 
     except Exception as e:
         print(f"[Shopping] 상품 검색 실패 {product.get('name')}: {e}")
-        # API 실패 시 기본 정보만 반환
         return {
             "name": product.get("name", ""),
             "category": product.get("category", "기타"),
@@ -64,6 +66,9 @@ async def _search_product(client: httpx.AsyncClient, product: dict) -> dict | No
             "link": f"https://search.shopping.naver.com/search/all?query={product.get('search_keyword', '')}",
             "mall": "네이버쇼핑",
             "search_keyword": product.get("search_keyword", ""),
+            "frame_image": product.get("frame_image", ""),
+            "frame_reason": product.get("frame_reason", ""),
+            "detected_tags": product.get("detected_tags", []),
         }
 
 

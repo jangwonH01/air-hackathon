@@ -5,6 +5,7 @@ export default function Upload({ onSuccess }) {
   const [channel, setChannel] = useState("");
   const [file, setFile] = useState(null);
   const [url, setUrl] = useState("");
+  const [isLive, setIsLive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [drag, setDrag] = useState(false);
 
@@ -18,6 +19,7 @@ export default function Upload({ onSuccess }) {
     form.append("channel", channel);
     if (url) {
       form.append("url", url);
+      form.append("is_live", isLive ? "yes" : "no");
     } else {
       form.append("video", file);
     }
@@ -54,6 +56,22 @@ export default function Upload({ onSuccess }) {
           <input value={url} onChange={e => { setUrl(e.target.value); setFile(null); }}
             placeholder="https://www.youtube.com/watch?v=..." style={inputStyle} />
         </div>
+        {url && (
+          <div onClick={() => setIsLive(v => !v)}
+            style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px", borderRadius: "10px", background: isLive ? "rgba(255,82,82,0.1)" : "rgba(255,255,255,0.03)", border: `1px solid ${isLive ? "#FF5252" : "rgba(255,255,255,0.1)"}`, cursor: "pointer", userSelect: "none" }}>
+            <div style={{ width: "36px", height: "20px", borderRadius: "10px", background: isLive ? "#FF5252" : "#444", position: "relative", transition: "background 0.2s" }}>
+              <div style={{ position: "absolute", top: "3px", left: isLive ? "19px" : "3px", width: "14px", height: "14px", borderRadius: "50%", background: "white", transition: "left 0.2s" }} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "0.9rem", color: isLive ? "#FF5252" : "#E0E0F0" }}>
+                {isLive ? "🔴 라이브 방송 모드" : "라이브 방송 모드"}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#8888AA", marginTop: "2px" }}>
+                {isLive ? "방송 종료 시 자동으로 쇼핑 팝업이 활성화됩니다" : "켜면 방송 종료를 감지해 자동 분석합니다"}
+              </div>
+            </div>
+          </div>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: "12px", color: "#8888AA", fontSize: "0.8rem" }}>
           <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.1)" }} />
           또는 파일 직접 업로드

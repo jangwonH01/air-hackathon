@@ -15,13 +15,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from models import init_db, get_db, AnalysisJob
-from tasks import analyze_video
+from tasks import analyze_video, record_live
 
 UPLOAD_DIR = "./uploads"
 GENERATED_APPS_DIR = os.getenv("GENERATED_APPS_DIR", "./generated_apps")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(GENERATED_APPS_DIR, exist_ok=True)
 
 app = FastAPI(title="AIR - AI Instant Retail", version="0.1.0")
 
@@ -32,8 +31,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+STILLS_DIR = "./stills"
+os.makedirs(STILLS_DIR, exist_ok=True)
+os.makedirs(GENERATED_APPS_DIR, exist_ok=True)
+
 # 생성된 웹앱 정적 파일 서빙
 app.mount("/apps", StaticFiles(directory=GENERATED_APPS_DIR), name="apps")
+app.mount("/stills", StaticFiles(directory=STILLS_DIR), name="stills")
 
 
 @app.on_event("startup")
@@ -49,10 +53,19 @@ async def create_job(
     channel: str = Form(""),
     video: UploadFile = File(None),
     url: str = Form(""),
+    is_live: str = Form("no"),
     db: Session = Depends(get_db),
 ):
-    """영상 업로드 또는 URL로 분석 시작"""
-    if url:
+    """영상 업로드, URL, 또는 라이브 방송 분석 시작"""
+    if url and is_live == "yes":
+        # 라이브 녹화 모드
+        job = AnalysisJob(title=title, channel=channel, video_path="", source_url=url, is_live="yes", status="waiting")
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        record_live.delay(job.id, url, title, channel)
+        return {"job_id": job.id, "status": "waiting", "message": "라이브 방송 모니터링을 시작했습니다."}
+    elif url:
         job = AnalysisJob(title=title, channel=channel, video_path="", source_url=url, status="pending")
         db.add(job)
         db.commit()
@@ -179,6 +192,8 @@ def _job_to_dict(job: AnalysisJob) -> dict:
         "title": job.title,
         "channel": job.channel,
         "status": job.status,
+        "is_live": job.is_live or "no",
+        "source_url": job.source_url or "",
         "product_count": len(job.products or []),
         "products": job.products or [],
         "webapp_url": job.webapp_url,
